@@ -6,3 +6,7 @@ Cargo.lock.bak
 .vscode/
 *.swp
 *.swo
+
+# Per-backend state, attachments, transient caches. Never committed —
+# contains real Signal store, identity keys, message history, etc.
+.data/

@@ -12,6 +12,9 @@ signal = ["dep:chat-isomorphic-backend-signal"]
 chat-isomorphic-core = { path = "../../crates/core" }
 chat-isomorphic-backend-signal = { path = "../../crates/backend-signal", optional = true }
 anyhow.workspace = true
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+clap.workspace = true
+futures.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "time", "signal"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
+uuid.workspace = true

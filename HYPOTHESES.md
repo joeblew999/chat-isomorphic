@@ -24,14 +24,20 @@ Status legend: **HYPOTHESIS** (unaudited) · **AUDITED** (rubric run, see eval)
 | Manager `Send`-ness | **Confirmed `!Send`** — requires `LocalSet` containment | AUDITED |
 | Open bugs to design around | Decryption-loop session-archive bug; PNI cipher first-contact decrypt failure; `presage-cli register` websocket failure. See eval doc. | AUDITED |
 
-## H2 — LLM / agent layer  *(AUDITED — see [02-llm-layer.md](docs/due-diligence/02-llm-layer.md))*
+## H2 — LLM / agent layer  *(DEFERRED — see note below)*
+
+**Reframed 2026-05-18:** chat-isomorphic is an MCP server, so the LLM lives
+in the *client* (Claude Desktop, Claude Code, custom agents) — not embedded
+in this binary. The audited rig-core / Anthropic findings in
+[02-llm-layer.md](docs/due-diligence/02-llm-layer.md) stand as research; they
+just no longer apply to this repo. They become relevant again only if we
+ever ship an embedded-LLM mode (e.g. for autonomous bot scenarios). Until
+then this row is parked.
 
 | Field | Value | Status |
 |---|---|---|
-| Primary | `rig-core` v0.37.0 — Anthropic provider has prompt caching, extended thinking, tools, vision, documents, streaming, current 4.x models | AUDITED |
-| Fallback for features rig misses | Drop to raw HTTP via `reqwest`. **`anthropic-ai-sdk` is not viable** — 0 commits in 90 days, no cache/thinking support, no 4.x models. | AUDITED |
-| No official Anthropic Rust SDK exists | Confirmed via crates.io + GitHub search 2026-05-18 | AUDITED |
-| Initial model | `CLAUDE_SONNET_4_6` constant from rig (matches our usual default) | AUDITED |
+| LLM SDK inside chat-isomorphic | Not needed — MCP client owns the LLM | DEFERRED |
+| If we ever re-embed | rig-core v0.37.0 (Anthropic provider) is still the right pick per the eval | DEFERRED |
 
 ## H3 — Reference implementations
 
@@ -57,6 +63,25 @@ Only audit these once Signal works end-to-end.
 | IRC | [aatxe/irc](https://github.com/aatxe/irc) | Stable, low churn |
 | iMessage | [ReagentX/imessage-exporter](https://github.com/ReagentX/imessage-exporter) | Read-only — send-side requires AppleScript shellout |
 | RCS | — | No Rust option |
+
+## H6 — Outer shell is an MCP server
+
+| Question | Current belief | Status |
+|---|---|---|
+| Primary distribution shape | An MCP server. Tools = backend operations (`signal.send_text`, `signal.list_threads`, `signal.receive_recent`, etc.). LLM lives in the client. | HYPOTHESIS |
+| Transport — v1 | **stdio only.** Matches Claude Desktop / Claude Code launching us as a subprocess. Simplest to verify. | HYPOTHESIS |
+| Transport — later | HTTP. Long-running native server somewhere (not Cloudflare Workers — presage can't run there). | HYPOTHESIS |
+| MCP SDK | Official [`rmcp`](https://github.com/modelcontextprotocol/rust-sdk) crate. Audit when we actually take the dep, not before. | HYPOTHESIS |
+| Build order | Backend trait implemented against presage first, MCP wrapping second. Cheaper iteration; wrap is mechanical once tools are real. | HYPOTHESIS |
+| Auth model | None for v1 (local subprocess, trusts the launching client). Revisit when HTTP transport lands. | HYPOTHESIS |
+
+## H7 — On-disk state lives in `.data/`
+
+| Question | Current belief | Status |
+|---|---|---|
+| Where do per-backend stores live? | `.data/<backend>/` inside the repo. Currently `.data/signal/signal.db` (relocated from `/tmp/chat-isomorphic-verify/` and verified to still load — same ACI/PNI). | AUDITED |
+| Committed? | No. `.data/` is gitignored — contains real Signal identity keys, message history, attachments. | AUDITED |
+| Cross-machine? | No. Relink per machine. Cheap because the verify dance is one QR scan. | AUDITED |
 
 ## H5 — Architecture shape
 

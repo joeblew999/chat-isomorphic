@@ -1,0 +1,21 @@
+# Secrets resolved from the macOS keychain.
+#
+# Write a secret with:   fnox set -p keychain <KEY>
+# Without `-p keychain` it lands here in plaintext — don't.
+#
+# Pull from this file at runtime via `fnox exec -- <command>` (mise tasks
+# in mise.toml do this on the tasks that need secrets).
+#
+# Shared item names ARE the cross-repo contract — renaming a key here
+# without updating every consumer breaks auth silently. Coordinate name
+# changes across repos.
+#
+# Anthropic / Claude keys are intentionally NOT here: chat-isomorphic is
+# an MCP server. The LLM (and its API key) belongs to the MCP client
+# (Claude Desktop, Claude Code, custom agent). We expose tools; we don't
+# call models.
+#
+# Slots reserved for when they're actually needed (uncomment + set in
+# keychain at that point, not before):
+#
+# SIGNAL_STORE_PASSPHRASE = "keychain"   # SQLCipher passphrase for .data/signal/signal.db

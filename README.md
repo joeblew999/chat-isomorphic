@@ -1,7 +1,8 @@
 # chat-isomorphic
 
 A Rust binary that abstracts over many chat / messenger backends behind one
-trait, driven by an LLM agent.
+trait. Distributed as an **MCP server** — the LLM (Claude Desktop, Claude
+Code, custom agents) lives in the client and calls our tools.
 
 The bet: chats are structurally equivalent — accounts, threads, messages,
 attachments, reactions — and a single isomorphic layer can route between them.

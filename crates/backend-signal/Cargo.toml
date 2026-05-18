@@ -6,8 +6,12 @@ rust-version.workspace = true
 
 [dependencies]
 chat-isomorphic-core = { path = "../core" }
+presage.workspace = true
+presage-store-sqlite.workspace = true
 async-trait.workspace = true
 futures.workspace = true
 thiserror.workspace = true
+tokio = { workspace = true, features = ["sync", "time"] }
 tracing.workspace = true
+url = "2"
 uuid.workspace = true

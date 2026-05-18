@@ -13,6 +13,7 @@ rust-version = "1.85"
 [workspace.dependencies]
 anyhow = "1"
 async-trait = "0.1"
+clap = { version = "4", features = ["derive", "env"] }
 futures = "0.3"
 serde = { version = "1", features = ["derive"] }
 thiserror = "1"
@@ -20,3 +21,14 @@ tokio = { version = "1", default-features = false }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4", "serde"] }
+
+# presage is git-only and pins libsignal-service via its own workspace.
+# We track the rev we audited in docs/due-diligence/01-signal-presage.md
+# (HEAD as of 2026-05-17, "Fix opening the Sqlite store without a passphrase").
+presage = { git = "https://github.com/whisperfish/presage", rev = "6793c3e8c30b807bddc7134c77049889bc57cf09" }
+presage-store-sqlite = { git = "https://github.com/whisperfish/presage", rev = "6793c3e8c30b807bddc7134c77049889bc57cf09" }
+
+# Mandatory: signal's fork of curve25519-dalek. presage will not build
+# without this patch. See https://github.com/whisperfish/libsignal-service-rs/tree/main#working-around-the-issue-with-curve25519-dalek
+[patch.crates-io]
+curve25519-dalek = { git = "https://github.com/signalapp/curve25519-dalek", tag = "signal-curve25519-4.1.3" }

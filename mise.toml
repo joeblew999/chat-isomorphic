@@ -1,0 +1,145 @@
+# Root-level mise: tools, env defaults, and dev tasks.
+#
+# `signal:*` tasks call our own binary at ./target/release/chat-isomorphic.
+# Every signal:* task depends on `build:signal` so a stale binary can't
+# silently mislead you.
+#
+# `presage-cli:*` tasks wrap the upstream presage-cli at $PRESAGE_CLI.
+# Kept alongside as a comparison harness — when our wrapper behaves
+# differently from upstream, run the matching `presage-cli:*` to A/B.
+#
+# Cargo/rustc come from rustup (system toolchain) — not pinned here.
+# Only fnox is pinned, for keychain-backed env injection on tasks that
+# need secrets. The Anthropic key is intentionally absent: this binary
+# is on the way to becoming an MCP server, so the LLM (and its API key)
+# lives in the MCP client.
+
+[tools]
+fnox = "1.19.0"
+
+[env]
+# Default to warn so tasks are quiet by default. Override per-run with
+# `RUST_LOG=info mise run signal:events` for the full libsignal trace.
+RUST_LOG = "warn"
+SIGNAL_STORE_PATH = ".data/signal/signal.db"
+SIGNAL_DEVICE_NAME = "chat-isomorphic-dev"
+# Path to the presage-cli we built from the cloned whisperfish/presage
+# checkout. Used by the `presage-cli:*` tasks only.
+PRESAGE_CLI = "{{config_root}}/../../whisperfish/presage/target/release/presage-cli"
+
+# ── Build / verify ────────────────────────────────────────────────────
+[tasks.check]
+description = "cargo check the workspace (no features)."
+run = "cargo check --workspace"
+
+[tasks.test]
+description = "Run all workspace tests."
+run = "cargo test --workspace"
+
+[tasks.fmt]
+description = "Format every crate via rustfmt."
+run = "cargo fmt --all"
+
+[tasks.lint]
+description = "Clippy across the workspace (warnings as errors)."
+run = "cargo clippy --workspace --all-targets -- -D warnings"
+
+[tasks."build:signal"]
+description = "Release build with the Signal backend compiled in."
+run = "cargo build --release -p chat-isomorphic --features signal"
+
+# ── Signal — our binary (the real thing) ──────────────────────────────
+[tasks."signal:link"]
+description = "Link this machine as a fresh secondary via our binary. rm -rf .data/signal/ first if relinking."
+depends = ["build:signal"]
+run = "./target/release/chat-isomorphic signal link --device-name $SIGNAL_DEVICE_NAME"
+
+[tasks."signal:whoami"]
+description = "Print own identity via our binary."
+depends = ["build:signal"]
+run = "./target/release/chat-isomorphic signal whoami"
+
+[tasks."signal:list-devices"]
+description = "What devices does the primary consider linked? Via our binary."
+depends = ["build:signal"]
+run = "./target/release/chat-isomorphic signal list-devices"
+
+[tasks."signal:unlink"]
+description = "Unlink a device. WILL FAIL from a secondary (presage rejects). Usage: mise run signal:unlink -- --device-id N."
+depends = ["build:signal"]
+run = "./target/release/chat-isomorphic signal unlink"
+
+[tasks."signal:events"]
+description = "Drain inbound and decode every variant for 30s default. Read-path validation via our binary. Usage: mise run signal:events -- --seconds 60 --stop-when-empty."
+depends = ["build:signal"]
+run = "./target/release/chat-isomorphic signal events"
+
+[tasks."signal:send-self"]
+description = "Send Note-to-Self via our binary. Usage: mise run signal:send-self -- 'hello'."
+depends = ["build:signal"]
+run = "./target/release/chat-isomorphic signal send-self"
+
+[tasks."signal:verify"]
+description = "Composite: whoami + list-devices + events(stop-when-empty) + send-self. Exits 0 iff read+write paths are healthy via our binary."
+depends = ["build:signal"]
+run = """
+set -e
+echo "── whoami ───────────────────────────────────────"
+./target/release/chat-isomorphic signal whoami
+echo
+echo "── list-devices ─────────────────────────────────"
+./target/release/chat-isomorphic signal list-devices
+echo
+echo "── events (drain, 15s cap) ──────────────────────"
+./target/release/chat-isomorphic signal events --seconds 15 --stop-when-empty
+echo
+echo "── send-self ────────────────────────────────────"
+./target/release/chat-isomorphic signal send-self "[chat-isomorphic verify] $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo
+echo "all checks passed — read + write paths healthy"
+"""
+
+# ── presage-cli — upstream A/B reference ──────────────────────────────
+# These wrap the upstream binary. Run when you suspect our binary is
+# doing something different from presage's own client; comparing the
+# two outputs isolates whether the bug is in us or presage.
+
+[tasks."presage-cli:link"]
+description = "Link via upstream presage-cli (reference flow with bash QR dance)."
+run = "scripts/signal/link.sh"
+
+[tasks."presage-cli:whoami"]
+description = "whoami via upstream presage-cli."
+run = "$PRESAGE_CLI --sqlite-db-path $SIGNAL_STORE_PATH whoami"
+
+[tasks."presage-cli:stats"]
+description = "presage-cli stats — pre-key / Kyber-key state. We don't expose this on our binary yet."
+run = "$PRESAGE_CLI --sqlite-db-path $SIGNAL_STORE_PATH stats"
+
+[tasks."presage-cli:sync"]
+description = "presage-cli sync -q — drain backlog (text-only print)."
+run = "$PRESAGE_CLI --sqlite-db-path $SIGNAL_STORE_PATH sync -q"
+
+[tasks."presage-cli:send-self"]
+description = "presage-cli send-to-own-ACI via scripts/signal/send-self.sh. Usage: mise run presage-cli:send-self -- 'hello'."
+run = "scripts/signal/send-self.sh"
+
+[tasks."presage-cli:contacts"]
+description = "presage-cli list-contacts — empty on fresh secondary."
+run = "$PRESAGE_CLI --sqlite-db-path $SIGNAL_STORE_PATH list-contacts"
+
+[tasks."presage-cli:groups"]
+description = "presage-cli list-groups."
+run = "$PRESAGE_CLI --sqlite-db-path $SIGNAL_STORE_PATH list-groups"
+
+[tasks."presage-cli:devices"]
+description = "presage-cli list-devices."
+run = "$PRESAGE_CLI --sqlite-db-path $SIGNAL_STORE_PATH list-devices"
+
+[tasks."presage-cli:unlink"]
+description = "presage-cli unlink-device — works from a primary only. Usage: mise run presage-cli:unlink -- -d 3."
+run = "$PRESAGE_CLI --sqlite-db-path $SIGNAL_STORE_PATH unlink-device"
+
+[tasks."presage-cli:verify"]
+description = "presage-cli composite: whoami + stats + sync + send-self."
+run = "scripts/signal/verify.sh"
