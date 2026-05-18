@@ -8,23 +8,26 @@ before it influences code.
 Status legend: **HYPOTHESIS** (unaudited) · **AUDITED** (rubric run, see eval)
 · **REJECTED** (eval found a blocker) · **LOCKED** (committed to in code).
 
-## H1 — Signal backend
+## H1 — Signal backend  *(AUDITED — see [01-signal-presage.md](docs/due-diligence/01-signal-presage.md))*
 
 | Field | Value | Status |
 |---|---|---|
-| Client crate | `presage` ([whisperfish/presage](https://github.com/whisperfish/presage), git-only) | HYPOTHESIS |
-| Store crate | `presage-store-sqlite` (same repo) | HYPOTHESIS |
-| Required patches | `signalapp/curve25519-dalek` @ `signal-curve25519-4.1.3`, `whisperfish/rusqlite`, optionally a `sqlx` fork for SQLCipher | HYPOTHESIS |
-| Linking model | Secondary device via QR only (no primary registration) | HYPOTHESIS |
-| Manager `Send`-ness | Believed `!Send` (drove gurk-rs's LocalPool) | HYPOTHESIS |
+| Client crate | `presage` ([whisperfish/presage](https://github.com/whisperfish/presage) @ `6793c3e8`, git-only) | AUDITED |
+| Store crate | `presage-store-sqlite` (same repo) — sled store is gone | AUDITED |
+| Required patches | `signalapp/curve25519-dalek` @ `signal-curve25519-4.1.3`; `whisperfish/rusqlite` for `libsqlite3-sys` (only if `cdsi` feature) | AUDITED |
+| Pinned transitive | `libsignal-service` is git-pinned in presage's own `Cargo.toml` — bumping presage = bumping libsignal-service | AUDITED |
+| Linking model | Both supported: phone-number register (SMS/voice) **and** secondary-device link. `presage-cli register` currently broken on websocket upgrade — secondary-device link is the safer onboarding path until that's fixed. | AUDITED |
+| Manager `Send`-ness | **Confirmed `!Send`** — requires `LocalSet` containment | AUDITED |
+| Open bugs to design around | Decryption-loop session-archive bug; PNI cipher first-contact decrypt failure; `presage-cli register` websocket failure. See eval doc. | AUDITED |
 
-## H2 — LLM / agent layer
+## H2 — LLM / agent layer  *(AUDITED — see [02-llm-layer.md](docs/due-diligence/02-llm-layer.md))*
 
 | Field | Value | Status |
 |---|---|---|
-| Primary candidate | `rig-core` ([0xPlaygrounds/rig](https://github.com/0xPlaygrounds/rig)) — first-class Anthropic provider | HYPOTHESIS |
-| Fallback for features rig hides | `anthropic-ai-sdk` ([katsuhirohonda/anthropic-sdk-rs](https://github.com/katsuhirohonda/anthropic-sdk-rs)) | HYPOTHESIS |
+| Primary | `rig-core` v0.37.0 — Anthropic provider has prompt caching, extended thinking, tools, vision, documents, streaming, current 4.x models | AUDITED |
+| Fallback for features rig misses | Drop to raw HTTP via `reqwest`. **`anthropic-ai-sdk` is not viable** — 0 commits in 90 days, no cache/thinking support, no 4.x models. | AUDITED |
 | No official Anthropic Rust SDK exists | Confirmed via crates.io + GitHub search 2026-05-18 | AUDITED |
+| Initial model | `CLAUDE_SONNET_4_6` constant from rig (matches our usual default) | AUDITED |
 
 ## H3 — Reference implementations
 
