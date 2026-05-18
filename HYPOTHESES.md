@@ -8,13 +8,17 @@ before it influences code.
 Status legend: **HYPOTHESIS** (unaudited) · **AUDITED** (rubric run, see eval)
 · **REJECTED** (eval found a blocker) · **LOCKED** (committed to in code).
 
-## H1 — Signal backend  *(AUDITED — see [01-signal-presage.md](docs/due-diligence/01-signal-presage.md))*
+## H1 — Signal backend  *(AUDITED — see [01-signal-presage.md](docs/due-diligence/01-signal-presage.md) + live verification [01a](docs/due-diligence/01a-presage-live-verification.md))*
 
 | Field | Value | Status |
 |---|---|---|
 | Client crate | `presage` ([whisperfish/presage](https://github.com/whisperfish/presage) @ `6793c3e8`, git-only) | AUDITED |
 | Store crate | `presage-store-sqlite` (same repo) — sled store is gone | AUDITED |
 | Required patches | `signalapp/curve25519-dalek` @ `signal-curve25519-4.1.3`; `whisperfish/rusqlite` for `libsqlite3-sys` (only if `cdsi` feature) | AUDITED |
+| Build tool prerequisite | **`protoc` required** — `spqr` (post-quantum ratchet) needs it. `brew install protobuf` on macOS | AUDITED |
+| QR provisioning window | ~60-90 s — render QR PNG and surface to user *before* awaiting the linking future | AUDITED |
+| `receive_messages` semantics | Stream emits `Received::QueueEmpty` cleanly; live-verified on this machine | AUDITED |
+| `sync-contacts` (await `Received::Contacts`) | Hangs — iOS primary may not deliver this variant to a fresh secondary. Treat as best-effort, do not block on it | AUDITED |
 | Pinned transitive | `libsignal-service` is git-pinned in presage's own `Cargo.toml` — bumping presage = bumping libsignal-service | AUDITED |
 | Linking model | Both supported: phone-number register (SMS/voice) **and** secondary-device link. `presage-cli register` currently broken on websocket upgrade — secondary-device link is the safer onboarding path until that's fixed. | AUDITED |
 | Manager `Send`-ness | **Confirmed `!Send`** — requires `LocalSet` containment | AUDITED |
