@@ -61,6 +61,15 @@ enum SignalVerb {
     SendSelf {
         body: String,
     },
+    /// List contacts cached in the local store. Empty until the primary
+    /// pushes contact-sync — use `request-contacts` to ask for it.
+    ListContacts,
+    /// List groups cached in the local store.
+    ListGroups,
+    /// Send a SyncMessage::Request{Contacts} to the primary, asking it
+    /// to push the contact list back to us. Then run `events` to see
+    /// whether the response arrives and gets stored.
+    RequestContacts,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -109,11 +118,61 @@ async fn run_signal(store: PathBuf, verb: SignalVerb) -> anyhow::Result<()> {
             }
         }
         SignalVerb::ListDevices => {
+            let me = backend.device_id();
             let devices = backend.list_devices().await?;
             for d in &devices {
-                println!("{d:?}");
+                let marker = if d.id == me { " (this device)" } else { "" };
+                let name = d.name.as_deref().unwrap_or("(no device name)");
+                println!(
+                    "- Device {}{}\n  Name: {}\n  Created: {}\n  Last seen: {}",
+                    d.id, marker, name, d.created_at, d.last_seen
+                );
             }
             println!("{} device(s) linked", devices.len());
+        }
+        SignalVerb::ListContacts => {
+            let contacts = backend.list_contacts().await?;
+            for c in &contacts {
+                let phone = c
+                    .phone_number
+                    .as_ref()
+                    .map(|p| p.to_string())
+                    .unwrap_or_else(|| "(no e164)".into());
+                let name = if c.name.is_empty() {
+                    "(no name)"
+                } else {
+                    c.name.as_str()
+                };
+                println!("- {}\n  Name:  {}\n  Phone: {}", c.uuid, name, phone);
+            }
+            println!("{} contact(s) cached", contacts.len());
+        }
+        SignalVerb::ListGroups => {
+            let groups = backend.list_groups().await?;
+            for (master_key, g) in &groups {
+                let short = master_key
+                    .iter()
+                    .take(8)
+                    .map(|b| format!("{b:02x}"))
+                    .collect::<String>();
+                let title = if g.title.is_empty() {
+                    "(no title)"
+                } else {
+                    g.title.as_str()
+                };
+                println!(
+                    "- {}…\n  Title:    {}\n  Members:  {}\n  Revision: {}",
+                    short,
+                    title,
+                    g.members.len(),
+                    g.revision
+                );
+            }
+            println!("{} group(s) cached", groups.len());
+        }
+        SignalVerb::RequestContacts => {
+            backend.request_contacts().await?;
+            println!("contact-sync request sent — run `signal events` to see the response");
         }
         SignalVerb::Unlink { device_id } => {
             backend.unlink_secondary(device_id).await?;

@@ -79,6 +79,21 @@ description = "Send Note-to-Self via our binary. Usage: mise run signal:send-sel
 depends = ["build:signal"]
 run = "./target/release/chat-isomorphic signal send-self"
 
+[tasks."signal:list-contacts"]
+description = "List contacts from the local store. Empty until the primary pushes contact-sync — see signal:request-contacts."
+depends = ["build:signal"]
+run = "./target/release/chat-isomorphic signal list-contacts"
+
+[tasks."signal:list-groups"]
+description = "List groups from the local store."
+depends = ["build:signal"]
+run = "./target/release/chat-isomorphic signal list-groups"
+
+[tasks."signal:request-contacts"]
+description = "Ask the primary to push the contact list. Follow with signal:events to see the response land."
+depends = ["build:signal"]
+run = "./target/release/chat-isomorphic signal request-contacts"
+
 [tasks."signal:verify"]
 description = "Composite: whoami + list-devices + events(stop-when-empty) + send-self. Exits 0 iff read+write paths are healthy via our binary."
 depends = ["build:signal"]

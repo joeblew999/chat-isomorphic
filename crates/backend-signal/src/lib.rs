@@ -8,7 +8,10 @@ use futures::channel::oneshot;
 use futures::{future, Stream, StreamExt};
 use presage::libsignal_service::configuration::SignalServers;
 use presage::libsignal_service::content::{Content, ContentBody, Metadata};
-use presage::libsignal_service::protocol::ServiceId;
+use presage::libsignal_service::protocol::{DeviceId, ServiceId};
+use presage::model::contacts::Contact;
+use presage::model::groups::Group;
+use presage::store::ContentsStore;
 use presage::libsignal_service::proto::{
     data_message, sync_message, typing_message, DataMessage, EditMessage, ReceiptMessage,
     SyncMessage, TypingMessage,
@@ -86,6 +89,37 @@ impl SignalBackend {
     pub async fn list_devices(&self) -> Result<Vec<DeviceInfo>, SignalError> {
         self.manager
             .devices()
+            .await
+            .map_err(|e| SignalError::Presage(e.to_string()))
+    }
+
+    pub fn device_id(&self) -> DeviceId {
+        self.manager.device_id()
+    }
+
+    pub async fn list_contacts(&self) -> Result<Vec<Contact>, SignalError> {
+        let iter = self
+            .manager
+            .store()
+            .contacts()
+            .await
+            .map_err(|e| SignalError::Store(e.to_string()))?;
+        Ok(iter.filter_map(Result::ok).collect())
+    }
+
+    pub async fn list_groups(&self) -> Result<Vec<([u8; 32], Group)>, SignalError> {
+        let iter = self
+            .manager
+            .store()
+            .groups()
+            .await
+            .map_err(|e| SignalError::Store(e.to_string()))?;
+        Ok(iter.filter_map(Result::ok).collect())
+    }
+
+    pub async fn request_contacts(&mut self) -> Result<(), SignalError> {
+        self.manager
+            .request_contacts()
             .await
             .map_err(|e| SignalError::Presage(e.to_string()))
     }

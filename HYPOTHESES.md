@@ -18,7 +18,7 @@ Status legend: **HYPOTHESIS** (unaudited) · **AUDITED** (rubric run, see eval)
 | Build tool prerequisite | **`protoc` required** — `spqr` (post-quantum ratchet) needs it. `brew install protobuf` on macOS | AUDITED |
 | QR provisioning window | ~60-90 s — render QR PNG and surface to user *before* awaiting the linking future | AUDITED |
 | `receive_messages` semantics | Stream emits `Received::QueueEmpty` cleanly; live-verified on this machine | AUDITED |
-| `sync-contacts` (await `Received::Contacts`) | Hangs — iOS primary may not deliver this variant to a fresh secondary. Treat as best-effort, do not block on it | AUDITED |
+| `sync-contacts` (await `Received::Contacts`) | **iOS primary does not push contacts back to a fresh presage secondary.** Repeated 2026-05-18: request goes out fine, no Contacts variant ever arrives. Same gap, opposite direction, as upstream presage issue [#328](https://github.com/whisperfish/presage/issues/328). Workaround: derive contacts from received-message traffic (deferred). | AUDITED |
 | Pinned transitive | `libsignal-service` is git-pinned in presage's own `Cargo.toml` — bumping presage = bumping libsignal-service | AUDITED |
 | Linking model | Both supported: phone-number register (SMS/voice) **and** secondary-device link. `presage-cli register` currently broken on websocket upgrade — secondary-device link is the safer onboarding path until that's fixed. | AUDITED |
 | Manager `Send`-ness | **Confirmed `!Send`** — requires `LocalSet` containment | AUDITED |
@@ -55,7 +55,7 @@ Only audit these once Signal works end-to-end.
 | WhatsApp | [oxidezap/whatsapp-rust](https://github.com/oxidezap/whatsapp-rust) | Pure Rust port of whatsmeow, active |
 | Telegram (bots) | [teloxide/teloxide](https://github.com/teloxide/teloxide) | Bot API, idiomatic |
 | Telegram (user) | [Lonami/grammers](https://github.com/Lonami/grammers) | MTProto |
-| Matrix | [matrix-org/matrix-rust-sdk](https://github.com/matrix-org/matrix-rust-sdk) | Mature, E2EE, official |
+| Matrix | [matrix-org/matrix-rust-sdk](https://github.com/matrix-org/matrix-rust-sdk) | **AUDITED — see [03-matrix.md](docs/due-diligence/03-matrix.md). ADOPT.** crate `matrix-sdk` v0.17.0, 2.1k★, Element-sponsored, no patches needed, sanctioned protocol. Trait stress test: `link` (QR) is Signal-shaped — Matrix uses password/OAuth, so auth stays backend-specific. |
 | Discord | [serenity-rs/serenity](https://github.com/serenity-rs/serenity) or [twilight-rs/twilight](https://github.com/twilight-rs/twilight) | Both alive |
 | Slack | [abdolence/slack-morphism-rust](https://github.com/abdolence/slack-morphism-rust) | Web/Events/Socket Mode |
 | Bluesky | [sugyan/atrium](https://github.com/sugyan/atrium) | ATProto |
@@ -74,6 +74,20 @@ Only audit these once Signal works end-to-end.
 | MCP SDK | Official [`rmcp`](https://github.com/modelcontextprotocol/rust-sdk) crate. Audit when we actually take the dep, not before. | HYPOTHESIS |
 | Build order | Backend trait implemented against presage first, MCP wrapping second. Cheaper iteration; wrap is mechanical once tools are real. | HYPOTHESIS |
 | Auth model | None for v1 (local subprocess, trusts the launching client). Revisit when HTTP transport lands. | HYPOTHESIS |
+
+## H8 — Matrix backend  *(AUDITED — see [03-matrix.md](docs/due-diligence/03-matrix.md) + homeserver eval [04-matrix-self-host.md](docs/due-diligence/04-matrix-self-host.md))*
+
+| Field | Value | Status |
+|---|---|---|
+| Client crate | [`matrix-sdk` v0.17.0](https://crates.io/crates/matrix-sdk) | AUDITED |
+| Store crate | `matrix-sdk-sqlite` (workspace member) with at-rest encryption | AUDITED |
+| Required patches | **none** — clean Cargo.toml, no fork wrangling | AUDITED |
+| Build prereqs | none additional (no protoc, no boringSSL gymnastics) | AUDITED |
+| Auth model | password / OAuth2 / SSO — **not** QR-linkable. The trait's `link` verb does not generalize across backends; auth stays per-backend. | AUDITED |
+| Homeserver — dev | `matrix.org` (zero setup) | AUDITED |
+| Homeserver — self-host | **[Continuwuity](https://forgejo.ellis.link/continuwuation/continuwuity)** v0.5.9 (community continuation of Conduit/conduwuit). Single binary, RocksDB-backed, Linux pre-builds, active 5+ committers. Conduit itself is stalled (1 commit in 90 days). Maelstrom is the scale-oriented alt, deferred. | AUDITED |
+| AppService bridges (strategic) | **AUDITED — see [05-mautrix-bridges.md](docs/due-diligence/05-mautrix-bridges.md).** Bridge ecosystem alive: 14+ active Go bridges under [`mautrix/*`](https://github.com/mautrix), all pushed within days of each other, shared `mautrix/go` framework. Top stars: WhatsApp 1,775★ / Telegram 1,684★ / Signal 648★ / Discord 459★ / iMessage 438★ / Meta 371★. Single-maintainer-coordinated (tulir) — strength (lockstep) and risk (bus factor). Not for v1; meaningful Phase-2 lever. | AUDITED |
+| Live verification | **deferred** — eval is static (gh + crates.io + forgejo). No `signal:verify`-equivalent against a real homeserver yet. |  |
 
 ## H7 — On-disk state lives in `.data/`
 
