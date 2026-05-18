@@ -62,7 +62,9 @@ Only audit these once Signal works end-to-end.
 
 | Question | Current belief | Status |
 |---|---|---|
-| One binary or one-per-backend? | One binary (matches gurk shape) | HYPOTHESIS |
-| Workspace layout | `crates/core` (trait) + `crates/backend-signal` + `bin/chat-isomorphic` | HYPOTHESIS |
-| Async runtime | tokio multi-thread, custom LocalPool with 8 MiB stack for Signal | HYPOTHESIS (carried from gurk) |
-| State persistence | SQLite, separate DB from any backend's internal store | HYPOTHESIS |
+| One binary or one-per-backend? | One binary, backends gated behind Cargo features | AUDITED (scaffold compiles, `cargo check --workspace` green) |
+| Workspace layout | `crates/core` (trait) + `crates/backend-<x>` (one per backend) + `bin/chat-isomorphic` (feature-flagged deps) | AUDITED |
+| Backend on/off — compile time | Cargo features on the binary crate: `--features signal`, etc. Default features = none. | AUDITED |
+| Backend on/off — runtime | Deferred until 2+ backends exist; placeholder for `--backend <name>` CLI flag | HYPOTHESIS |
+| Async runtime | tokio current-thread in bin scaffold; will need a Signal-dedicated LocalSet thread with 8 MiB stack once presage is wired (verified `!Send`) | AUDITED |
+| State persistence | SQLite, separate DB from any backend's internal store (jean-claude side-table pattern) | HYPOTHESIS |

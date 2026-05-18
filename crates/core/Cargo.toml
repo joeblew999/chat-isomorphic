@@ -1,0 +1,12 @@
+[package]
+name = "chat-isomorphic-core"
+version = "0.0.1"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+futures.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+uuid.workspace = true

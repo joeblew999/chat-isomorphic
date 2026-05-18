@@ -1,0 +1,13 @@
+[package]
+name = "chat-isomorphic-backend-signal"
+version = "0.0.1"
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+chat-isomorphic-core = { path = "../core" }
+async-trait.workspace = true
+futures.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true
