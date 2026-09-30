@@ -19,6 +19,7 @@
 idiomatic_version_file_enable_tools = ["rust"]
 
 [tools]
+"aqua:protocolbuffers/protobuf/protoc" = "35.0"
 fnox = "1.19.0"
 
 [env]
