@@ -8,11 +8,15 @@
 # Kept alongside as a comparison harness — when our wrapper behaves
 # differently from upstream, run the matching `presage-cli:*` to A/B.
 #
-# Cargo/rustc come from rustup (system toolchain) — not pinned here.
+# Cargo/rustc: pinned in rust-toolchain.toml (rustup reads it; mise installs it).
 # Only fnox is pinned, for keychain-backed env injection on tasks that
 # need secrets. The Anthropic key is intentionally absent: this binary
 # is on the way to becoming an MCP server, so the LLM (and its API key)
 # lives in the MCP client.
+
+[settings]
+# rust-toolchain.toml is the Rust pin; this makes `mise install` honour it.
+idiomatic_version_file_enable_tools = ["rust"]
 
 [tools]
 fnox = "1.19.0"
